@@ -1,0 +1,24 @@
+Configuration:
+  status: error
+  name: EmitToGraphiteLog4jAppenderFunctionalTest
+  thresholdFilter:
+    level: error
+  appenders:
+    EmitToGraphiteLog4jAppender:
+      name: EmitToGraphiteLog4jAppender
+      address: "haystack.local" # set in /etc/hosts per instructions in haystack-deployment package
+      port: 2003 # default Graphite port, rarely overridden, but can be overridden by env variable
+      pollintervalseconds: 60
+      queuesize: 10
+  Loggers:
+    logger:
+      -
+        name: com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender
+        level: error
+        additivity: false
+        AppenderRef:
+          ref: EmitToGraphiteLog4jAppender
+    Root:
+      level: error
+      AppenderRef:
+        ref: EmitToGraphiteLog4jAppender
