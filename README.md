@@ -3,8 +3,8 @@ A log4j appender that sends an error count to a graphite endpoint
 
 ## Overview
 To facilitate counting errors and alarming when they occur, this package contains a
-[Log4j](https://en.wikipedia.org/wiki/Log4j)
-[Appender](https://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/Appender.html)
+[Log4j](https://en.wikipedia.org/wiki/Log4j) 2
+[Appender](https://logging.apache.org/log4j/2.x/log4j-core/apidocs/org/apache/logging/log4j/core/Appender.html)
 that sends a [Graphite](https://graphiteapp.org/)
 [plaintext protocol](http://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol)
 message to a Graphite endpoint. The intent of this Appender is to make it easier to alarm on error messages,
