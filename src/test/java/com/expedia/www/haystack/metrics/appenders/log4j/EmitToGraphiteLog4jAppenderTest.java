@@ -26,6 +26,7 @@ import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.NULL_STACK_TRACE_ELEMENT_MSG;
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.SUBSYSTEM;
 import static org.apache.logging.log4j.Level.ERROR;
+import static org.apache.logging.log4j.Level.FATAL;
 import static org.apache.logging.log4j.Level.WARN;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
@@ -169,7 +170,7 @@ public class EmitToGraphiteLog4jAppenderTest {
 
     @Test
     public void testIsLevelSevereEnoughToCount() {
-        final Set<Level> levelsThatAreSevereEnoughToCount = Sets.newHashSet(ERROR, Level.FATAL);
+        final Set<Level> levelsThatAreSevereEnoughToCount = Sets.newHashSet(ERROR, FATAL);
         final Level[] levels = Level.values();
         for(final Level level : levels) {
             assertEquals(levelsThatAreSevereEnoughToCount.contains(level),

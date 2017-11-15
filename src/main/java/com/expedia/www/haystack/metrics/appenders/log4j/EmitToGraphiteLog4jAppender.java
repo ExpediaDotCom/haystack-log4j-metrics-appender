@@ -22,6 +22,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.apache.logging.log4j.Level.ERROR;
 import static org.apache.logging.log4j.Level.FATAL;
 
+/**
+ * A log4j2 appender that sends an error count to a graphite endpoint.
+ */
 @Plugin(name = "EmitToGraphiteLog4jAppender", category = "Core", elementType = "appender")
 public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     @VisibleForTesting
@@ -42,9 +45,8 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         super(name, null, null);
     }
 
-    @SuppressWarnings("WeakerAccess")
     @PluginFactory
-    public static EmitToGraphiteLog4jAppender createAppender(
+    static EmitToGraphiteLog4jAppender createAppender(
             @PluginAttribute(value = "name", defaultString = "EmitToGraphiteLog4jAppender") String name,
             @PluginAttribute(value = "address", defaultString = "haystack.local") String address,
             @PluginAttribute(value = "port", defaultInt = 2003) int port,
@@ -64,6 +66,12 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         }
     }
 
+    /**
+     * Counts a log event if and only if it is an ERROR or a FATAL.
+     * @param logEvent the log event; if logEvent.getSource() returns null (as its JavaDoc says it can), then an error
+     *                 will be logged, otherwise Servo counter that identifies the source of the error will be
+     *                 incremented.
+     */
     @Override
     public void append(LogEvent logEvent) {
         final Level level = logEvent.getLevel();
