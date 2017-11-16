@@ -29,6 +29,9 @@ of the class, and all the periods have been replaced by hyphens).
 * `ERROR_TYPE` is either `ERROR` or `FATAL`.
 * `<suffix>` is TODO list the metric suffixes added by Servo.
 
+### Building
+Simply run `mvn clean package` from the root directory of the cloned repository.
+
 ### Releases
 1. Decide what kind of version bump is necessary, based on [Semantic Versioning](http://semver.org/) conventions.
 In the items below, the version number you select will be referred to as `x.y.z`.
