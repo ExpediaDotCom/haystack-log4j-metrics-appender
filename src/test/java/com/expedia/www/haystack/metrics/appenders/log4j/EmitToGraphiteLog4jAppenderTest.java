@@ -58,7 +58,7 @@ public class EmitToGraphiteLog4jAppenderTest {
     private static final Class<EmitToGraphiteLog4jAppenderTest> CLASS = EmitToGraphiteLog4jAppenderTest.class;
     private static final String FULLY_QUALIFIED_CLASS_NAME = CLASS.getName().replace('.', '-');
     private static final String APPENDER_NAME = RANDOM.nextLong() + "APPENDER_NAME";
-    private static final String ADDRESS = RANDOM.nextLong() + "ADDRESS";
+    private static final String HOST = RANDOM.nextLong() + "HOST";
     private static final String METHOD_NAME = RANDOM.nextLong() + "METHOD_NAME";
     private static final String FILE_NAME = RANDOM.nextLong() + "FILE_NAME";
     private static final int LINE_NUMBER = RANDOM.nextInt(Integer.MAX_VALUE);
@@ -66,7 +66,7 @@ public class EmitToGraphiteLog4jAppenderTest {
     private static final int POLL_INTERVAL_SECONDS = RANDOM.nextInt(Integer.MAX_VALUE);
     private static final int QUEUE_SIZE = RANDOM.nextInt(Integer.MAX_VALUE);
     private static final GraphiteConfig GRAPHITE_CONFIG = new GraphiteConfigImpl(
-            ADDRESS, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
+            HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
     private static final String S_LINE_NUMBER = Integer.toString(LINE_NUMBER);
     private static final String COUNTER_NAME = ERROR.name();
     private static final int NUMBER_OF_ITERATIONS_IN_TESTS = RANDOM.nextInt(Byte.MAX_VALUE) + 2;
@@ -104,7 +104,7 @@ public class EmitToGraphiteLog4jAppenderTest {
         stackTraceElement = new StackTraceElement(FULLY_QUALIFIED_CLASS_NAME, METHOD_NAME, FILE_NAME, LINE_NUMBER);
         when(mockFactory.createMetricPublishing()).thenReturn(mockMetricPublishing);
         emitToGraphiteLog4jAppender = EmitToGraphiteLog4jAppender.createAppender(
-                APPENDER_NAME, ADDRESS, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
+                APPENDER_NAME, HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
     }
 
     private void stubOutStaticDependencies() {
@@ -227,7 +227,7 @@ public class EmitToGraphiteLog4jAppenderTest {
     public void testStartMetricPublishingBackgroundThread() {
         for(int i = 0; i < NUMBER_OF_ITERATIONS_IN_TESTS; i++) {
             EmitToGraphiteLog4jAppender.startMetricPublishingBackgroundThreadIfNotAlreadyStarted(
-                    ADDRESS, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
+                    HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
         }
 
         expectedTimesForCreateMetricPublishing = NUMBER_OF_ITERATIONS_IN_TESTS + 1;

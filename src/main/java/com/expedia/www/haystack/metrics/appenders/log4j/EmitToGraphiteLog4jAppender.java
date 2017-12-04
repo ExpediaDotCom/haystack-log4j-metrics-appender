@@ -64,20 +64,20 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     @PluginFactory
     static EmitToGraphiteLog4jAppender createAppender(
             @PluginAttribute(value = "name", defaultString = "EmitToGraphiteLog4jAppender") String name,
-            @PluginAttribute(value = "address", defaultString = "haystack.local") String address,
+            @PluginAttribute(value = "host", defaultString = "haystack.local") String host,
             @PluginAttribute(value = "port", defaultInt = 2003) int port,
             @PluginAttribute(value = "pollintervalseconds", defaultInt = 60) int pollintervalseconds,
             @PluginAttribute(value = "queuesize", defaultInt = 10) int queuesize) {
         // Start metric publishing background thread if it isn't already running
-        startMetricPublishingBackgroundThreadIfNotAlreadyStarted(address, port, pollintervalseconds, queuesize);
+        startMetricPublishingBackgroundThreadIfNotAlreadyStarted(host, port, pollintervalseconds, queuesize);
         return new EmitToGraphiteLog4jAppender(name);
     }
 
     @VisibleForTesting
     static void startMetricPublishingBackgroundThreadIfNotAlreadyStarted(
-            String address, int port, int pollintervalseconds, int queuesize) {
+            String host, int port, int pollintervalseconds, int queuesize) {
         if (METRIC_PUBLISHING.compareAndSet(null, factory.createMetricPublishing())) {
-            final GraphiteConfig graphiteConfig = new GraphiteConfigImpl(address, port, pollintervalseconds, queuesize);
+            final GraphiteConfig graphiteConfig = new GraphiteConfigImpl(host, port, pollintervalseconds, queuesize);
             METRIC_PUBLISHING.get().start(graphiteConfig);
         }
     }
