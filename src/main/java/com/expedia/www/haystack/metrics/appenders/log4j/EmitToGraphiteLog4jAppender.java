@@ -33,7 +33,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.logging.log4j.Level.ERROR;
 import static org.apache.logging.log4j.Level.FATAL;
@@ -48,8 +48,6 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     @VisibleForTesting
     static final String SUBSYSTEM = "errors";
     @VisibleForTesting
-    static final AtomicReference<MetricPublishing> METRIC_PUBLISHING = new AtomicReference<>(null);
-    @VisibleForTesting
     static final Map<Integer, Counter> ERRORS_COUNTERS = new ConcurrentHashMap<>();
 
     @VisibleForTesting
@@ -57,8 +55,15 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     @VisibleForTesting
     static Logger logger = LogManager.getLogger(EmitToGraphiteLog4jAppender.class);
 
+    private final MetricPublishing metricPublishing;
+
     private EmitToGraphiteLog4jAppender(String name) {
+        this(name, factory.createMetricPublishing());
+    }
+
+    private EmitToGraphiteLog4jAppender(String name, MetricPublishing metricPublishing) {
         super(name, null, null);
+        this.metricPublishing = metricPublishing;
     }
 
     @PluginFactory
@@ -67,19 +72,25 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
             @PluginAttribute(value = "host", defaultString = "haystack.local") String host,
             @PluginAttribute(value = "port", defaultInt = 2003) int port,
             @PluginAttribute(value = "pollintervalseconds", defaultInt = 60) int pollintervalseconds,
-            @PluginAttribute(value = "queuesize", defaultInt = 10) int queuesize) {
-        // Start metric publishing background thread if it isn't already running
-        startMetricPublishingBackgroundThreadIfNotAlreadyStarted(host, port, pollintervalseconds, queuesize);
-        return new EmitToGraphiteLog4jAppender(name);
+            @PluginAttribute(value = "queuesize", defaultInt = 10) int queuesize,
+            @PluginAttribute(value = "sendasrate") boolean sendasrrate) {
+        final EmitToGraphiteLog4jAppender emitToGraphiteLog4jAppender = new EmitToGraphiteLog4jAppender(name);
+        emitToGraphiteLog4jAppender.startMetricPublishingBackgroundThread(
+                host, port, pollintervalseconds, queuesize, sendasrrate);
+        return emitToGraphiteLog4jAppender;
     }
 
-    @VisibleForTesting
-    static void startMetricPublishingBackgroundThreadIfNotAlreadyStarted(
-            String host, int port, int pollintervalseconds, int queuesize) {
-        if (METRIC_PUBLISHING.compareAndSet(null, factory.createMetricPublishing())) {
-            final GraphiteConfig graphiteConfig = new GraphiteConfigImpl(host, port, pollintervalseconds, queuesize);
-            METRIC_PUBLISHING.get().start(graphiteConfig);
-        }
+    private void startMetricPublishingBackgroundThread(
+            String host, int port, int pollintervalseconds, int queuesize, boolean sendasrate) {
+        final GraphiteConfig graphiteConfig = new GraphiteConfigImpl(
+                host, port, pollintervalseconds, queuesize, sendasrate);
+        metricPublishing.start(graphiteConfig);
+    }
+
+    @Override
+    public boolean stop(final long timeout, final TimeUnit timeUnit) {
+        metricPublishing.stop();
+        return super.stop(timeout, timeUnit);
     }
 
     /**
@@ -106,7 +117,7 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     @VisibleForTesting
     Counter getCounter(Level level, StackTraceElement stackTraceElement, int hashCode) {
         if (!ERRORS_COUNTERS.containsKey(hashCode)) {
-            final String fullyQualifiedClassName = stackTraceElement.getClassName().replace('.', '-');
+            final String fullyQualifiedClassName = changePeriodsToDashes(stackTraceElement.getClassName());
             final String lineNumber = Integer.toString(stackTraceElement.getLineNumber());
             final Counter counter = factory.createCounter(fullyQualifiedClassName, lineNumber, level.name());
 
@@ -119,6 +130,10 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         return ERRORS_COUNTERS.get(hashCode);
     }
 
+    static String changePeriodsToDashes(String fullyQualifiedClassName) {
+        return fullyQualifiedClassName.replace('.', '-');
+    }
+
     @VisibleForTesting
     boolean isLevelSevereEnoughToCount(Level level) {
         return level == ERROR || level == FATAL;
@@ -129,7 +144,7 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         static MetricObjects metricObjects = new MetricObjects();
 
         Counter createCounter(String application, String className, String counterName) {
-            return metricObjects.createAndRegisterCounter(SUBSYSTEM, application, className, counterName);
+            return metricObjects.createAndRegisterResettingCounter(SUBSYSTEM, application, className, counterName);
         }
 
         MetricPublishing createMetricPublishing() {
