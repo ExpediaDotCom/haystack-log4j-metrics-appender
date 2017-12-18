@@ -38,7 +38,6 @@ import java.util.Random;
 import java.util.Set;
 
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.ERRORS_COUNTERS;
-import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.METRIC_PUBLISHING;
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.NULL_STACK_TRACE_ELEMENT_MSG;
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.SUBSYSTEM;
 import static org.apache.logging.log4j.Level.ERROR;
@@ -46,6 +45,7 @@ import static org.apache.logging.log4j.Level.FATAL;
 import static org.apache.logging.log4j.Level.WARN;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -65,8 +65,9 @@ public class EmitToGraphiteLog4jAppenderTest {
     private static final int PORT = RANDOM.nextInt(Integer.MAX_VALUE);
     private static final int POLL_INTERVAL_SECONDS = RANDOM.nextInt(Integer.MAX_VALUE);
     private static final int QUEUE_SIZE = RANDOM.nextInt(Integer.MAX_VALUE);
+    private static final boolean SEND_AS_RATE = RANDOM.nextBoolean();
     private static final GraphiteConfig GRAPHITE_CONFIG = new GraphiteConfigImpl(
-            HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
+            HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
     private static final String S_LINE_NUMBER = Integer.toString(LINE_NUMBER);
     private static final String COUNTER_NAME = ERROR.name();
     private static final int NUMBER_OF_ITERATIONS_IN_TESTS = RANDOM.nextInt(Byte.MAX_VALUE) + 2;
@@ -94,17 +95,15 @@ public class EmitToGraphiteLog4jAppenderTest {
 
     private StackTraceElement stackTraceElement;
     private EmitToGraphiteLog4jAppender emitToGraphiteLog4jAppender;
-    private int expectedTimesForCreateMetricPublishing = 1;
 
     @Before
     public void setUp() {
         stubOutStaticDependencies();
-        METRIC_PUBLISHING.set(null);
         ERRORS_COUNTERS.clear();
         stackTraceElement = new StackTraceElement(FULLY_QUALIFIED_CLASS_NAME, METHOD_NAME, FILE_NAME, LINE_NUMBER);
         when(mockFactory.createMetricPublishing()).thenReturn(mockMetricPublishing);
         emitToGraphiteLog4jAppender = EmitToGraphiteLog4jAppender.createAppender(
-                APPENDER_NAME, HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
+                APPENDER_NAME, HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
     }
 
     private void stubOutStaticDependencies() {
@@ -119,7 +118,7 @@ public class EmitToGraphiteLog4jAppenderTest {
     @After
     public void tearDown() {
         restoreStaticDependencies();
-        verify(mockFactory, times(expectedTimesForCreateMetricPublishing)).createMetricPublishing();
+        verify(mockFactory).createMetricPublishing();
         verify(mockMetricPublishing).start(GRAPHITE_CONFIG);
         verifyNoMoreInteractions(mockLogEvent, mockFactory, mockCounter, mockMetricObjects, mockMetricPublishing,
                 mockLogger);
@@ -196,20 +195,28 @@ public class EmitToGraphiteLog4jAppenderTest {
     
     @Test
     public void testFactoryCreateCounter() {
-        when(mockMetricObjects.createAndRegisterCounter(anyString(), anyString(), anyString(), anyString()))
+        when(mockMetricObjects.createAndRegisterResettingCounter(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(mockCounter);
 
         final Counter counter = realFactory.createCounter(FULLY_QUALIFIED_CLASS_NAME, S_LINE_NUMBER, COUNTER_NAME);
 
         assertSame(mockCounter, counter);
-        verify(mockMetricObjects).createAndRegisterCounter(
+        verify(mockMetricObjects).createAndRegisterResettingCounter(
                 SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, S_LINE_NUMBER, COUNTER_NAME);
+    }
+
+    @Test
+    public void testStop() {
+        emitToGraphiteLog4jAppender.stop();
+
+        assertTrue(emitToGraphiteLog4jAppender.isStopped());
+        verify(mockMetricPublishing).stop();
     }
 
     @Test
     public void testEndToEndFunctionalBehavior() {
         EmitToGraphiteLog4jAppender.factory = realFactory;
-        when(mockMetricObjects.createAndRegisterCounter(anyString(), anyString(), anyString(), anyString()))
+        when(mockMetricObjects.createAndRegisterResettingCounter(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(mockCounter);
 
         final int lineNumberOfThisNewThrowable = new Throwable().getStackTrace()[0].getLineNumber();
@@ -218,18 +225,9 @@ public class EmitToGraphiteLog4jAppenderTest {
             LogManager.getLogger(EmitToGraphiteLog4jAppenderTest.class).error("Test");
         }
 
-        verify(mockMetricObjects).createAndRegisterCounter(
+        verify(mockMetricObjects).createAndRegisterResettingCounter(
                 SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, lineNumberOfTheLoggerDotErrorCall, COUNTER_NAME);
         verify(mockCounter, times(NUMBER_OF_ITERATIONS_IN_TESTS)).increment();
     }
 
-    @Test
-    public void testStartMetricPublishingBackgroundThread() {
-        for(int i = 0; i < NUMBER_OF_ITERATIONS_IN_TESTS; i++) {
-            EmitToGraphiteLog4jAppender.startMetricPublishingBackgroundThreadIfNotAlreadyStarted(
-                    HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE);
-        }
-
-        expectedTimesForCreateMetricPublishing = NUMBER_OF_ITERATIONS_IN_TESTS + 1;
-    }
 }
