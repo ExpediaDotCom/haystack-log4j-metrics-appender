@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.1.4 / 2018-01-04 Emit an ERROR metric, with a count of 0, every minute
+The writing of a metric to show that the appender is working now occurs in a background thread every minute;
+the value of the metric thus emitted will be 0. When an error occurs, the value of the metric will be greater than 0,
+and the tags of the metric will be different than what was emitted by the background thread.
+
 ## 0.1.3 / 2017-12-18 Separate polling thread per appender; emit start up metric; call close() when shutting down
 As part of an effort to be sure that the connection to the metrics database is closed when the appender is
 no longer being used, each appender will have its own polling thread, and close() will be called appropriately.
