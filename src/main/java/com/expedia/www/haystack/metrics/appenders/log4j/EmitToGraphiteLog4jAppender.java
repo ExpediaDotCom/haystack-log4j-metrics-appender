@@ -32,6 +32,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 
 import java.util.Map;
+import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -44,26 +45,38 @@ import static org.apache.logging.log4j.Level.FATAL;
 @Plugin(name = "EmitToGraphiteLog4jAppender", category = "Core", elementType = "appender")
 public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     @VisibleForTesting
+    static Factory staticFactory = new Factory();
+    @VisibleForTesting
     static final String NULL_STACK_TRACE_ELEMENT_MSG = "Null StackTraceElement found for LogEvent [%s] LoggerFqcn [%s]";
     @VisibleForTesting
     static final String SUBSYSTEM = "errors";
     @VisibleForTesting
-    static final Map<Integer, Counter> ERRORS_COUNTERS = new ConcurrentHashMap<>();
+    static final Map<String, Counter> ERRORS_COUNTERS = new ConcurrentHashMap<>();
 
-    @VisibleForTesting
-    static Factory factory = new Factory();
     @VisibleForTesting
     static Logger logger = LogManager.getLogger(EmitToGraphiteLog4jAppender.class);
 
     private final MetricPublishing metricPublishing;
+    private final MetricObjects metricObjects;
+    private final Factory factory;
+    private StartUpMetric startUpMetric;
 
     private EmitToGraphiteLog4jAppender(String name) {
-        this(name, factory.createMetricPublishing());
+        this(name, new MetricPublishing(), new MetricObjects(), new Factory());
     }
 
-    private EmitToGraphiteLog4jAppender(String name, MetricPublishing metricPublishing) {
+    @VisibleForTesting
+    EmitToGraphiteLog4jAppender(
+            String name, MetricPublishing metricPublishing, MetricObjects metricObjects, Factory factory) {
         super(name, null, null);
         this.metricPublishing = metricPublishing;
+        this.metricObjects = metricObjects;
+        this.factory = factory;
+    }
+
+    @VisibleForTesting
+    void setStartUpMetric(StartUpMetric startUpMetric) {
+        this.startUpMetric = startUpMetric;
     }
 
     @PluginFactory
@@ -74,13 +87,18 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
             @PluginAttribute(value = "pollintervalseconds", defaultInt = 60) int pollintervalseconds,
             @PluginAttribute(value = "queuesize", defaultInt = 10) int queuesize,
             @PluginAttribute(value = "sendasrate") boolean sendasrrate) {
-        final EmitToGraphiteLog4jAppender emitToGraphiteLog4jAppender = new EmitToGraphiteLog4jAppender(name);
+        final StartUpMetric startUpMetric = staticFactory.createStartUpMetric(
+                new MetricObjects(), new Timer());
+        final EmitToGraphiteLog4jAppender emitToGraphiteLog4jAppender
+                = staticFactory.createEmitToGraphiteLog4jAppender(name);
         emitToGraphiteLog4jAppender.startMetricPublishingBackgroundThread(
                 host, port, pollintervalseconds, queuesize, sendasrrate);
+        emitToGraphiteLog4jAppender.setStartUpMetric(startUpMetric);
         return emitToGraphiteLog4jAppender;
     }
 
-    private void startMetricPublishingBackgroundThread(
+    @VisibleForTesting
+    void startMetricPublishingBackgroundThread(
             String host, int port, int pollintervalseconds, int queuesize, boolean sendasrate) {
         final GraphiteConfig graphiteConfig = new GraphiteConfigImpl(
                 host, port, pollintervalseconds, queuesize, sendasrate);
@@ -88,8 +106,17 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     }
 
     @Override
+    public void start() {
+        super.start();
+        startUpMetric.start();
+    }
+
+    @Override
     public boolean stop(final long timeout, final TimeUnit timeUnit) {
         metricPublishing.stop();
+        if(startUpMetric != null) {
+            startUpMetric.stop();
+        }
         return super.stop(timeout, timeUnit);
     }
 
@@ -107,7 +134,7 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
             // JavaDoc says it can be null, but it's unclear when that would happen; if it does, log an error, but note
             // that a null StackTraceElement during that logging will result in infinite recursion!
             if (stackTraceElement != null) {
-                getCounter(level, stackTraceElement, stackTraceElement.hashCode()).increment();
+                getCounter(level, stackTraceElement).increment();
             } else {
                 logger.error(NULL_STACK_TRACE_ELEMENT_MSG, logEvent, logEvent.getLoggerFqcn()); // should never happen
             }
@@ -115,19 +142,21 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     }
 
     @VisibleForTesting
-    Counter getCounter(Level level, StackTraceElement stackTraceElement, int hashCode) {
-        if (!ERRORS_COUNTERS.containsKey(hashCode)) {
-            final String fullyQualifiedClassName = changePeriodsToDashes(stackTraceElement.getClassName());
-            final String lineNumber = Integer.toString(stackTraceElement.getLineNumber());
-            final Counter counter = factory.createCounter(fullyQualifiedClassName, lineNumber, level.name());
+    Counter getCounter(Level level, StackTraceElement stackTraceElement) {
+        final String fullyQualifiedClassName = changePeriodsToDashes(stackTraceElement.getClassName());
+        final String lineNumber = Integer.toString(stackTraceElement.getLineNumber());
+        final String key = fullyQualifiedClassName + ':' + lineNumber;
+        if (!ERRORS_COUNTERS.containsKey(key)) {
+            final Counter counter = factory.createCounter(
+                    metricObjects, fullyQualifiedClassName, lineNumber, level.name());
 
             // It is possible but highly unlikely that two threads are in this if() block at the same time; if that
             // occurs, only one of the calls to ERRORS_COUNTERS.putIfAbsent(hashCode, counter) in the next line of code
             // will succeed, but the increment of the thread whose call did not succeed will not be lost, because the
             // value returned by this method will be the Counter put successfully by the other thread.
-            ERRORS_COUNTERS.putIfAbsent(hashCode, counter);
+            ERRORS_COUNTERS.putIfAbsent(key, counter);
         }
-        return ERRORS_COUNTERS.get(hashCode);
+        return ERRORS_COUNTERS.get(key);
     }
 
     static String changePeriodsToDashes(String fullyQualifiedClassName) {
@@ -141,14 +170,16 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
 
     @VisibleForTesting
     static class Factory {
-        static MetricObjects metricObjects = new MetricObjects();
-
-        Counter createCounter(String application, String className, String counterName) {
+        Counter createCounter(MetricObjects metricObjects, String application, String className, String counterName) {
             return metricObjects.createAndRegisterResettingCounter(SUBSYSTEM, application, className, counterName);
         }
 
-        MetricPublishing createMetricPublishing() {
-            return new MetricPublishing();
+        StartUpMetric createStartUpMetric(MetricObjects metricObjects, Timer timer) {
+            return new StartUpMetric(timer, this, metricObjects);
+        }
+
+        EmitToGraphiteLog4jAppender createEmitToGraphiteLog4jAppender(String name) {
+            return new EmitToGraphiteLog4jAppender(name);
         }
     }
 }
