@@ -75,6 +75,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <coveralls-maven-plugin-version>4.3.0</coveralls-maven-plugin-version>
         <haystack-metrics-version>0.4.0</haystack-metrics-version>
         <java.version>1.8</java.version>
         <jackson-databind-version>2.9.1</jackson-databind-version>
@@ -264,6 +265,14 @@
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.eluder.coveralls</groupId>
+                <artifactId>coveralls-maven-plugin</artifactId>
+                <version>${coveralls-maven-plugin-version}</version>
+                <configuration>
+                    <repoToken>7qIhD6iPe8A2yYGs3wUVTVeH7WhqJRxUN</repoToken>
                 </configuration>
             </plugin>
         </plugins>
