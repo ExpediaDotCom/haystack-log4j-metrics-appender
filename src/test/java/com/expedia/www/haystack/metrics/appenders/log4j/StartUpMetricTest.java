@@ -74,4 +74,11 @@ public class StartUpMetricTest {
                 FULLY_QUALIFIED_CLASS_NAME, LINE_NUMBER_OF_EMIT_START_UP_METRIC_METHOD, Level.ERROR.toString());
         verify(mockCounter).increment(0);
     }
+
+    @Test
+    public void testStop() {
+        startUpMetric.stop();
+
+        verify(mockTimer).cancel();
+    }
 }
