@@ -6,6 +6,7 @@ Configuration:
   appenders:
     EmitToGraphiteLog4jAppender:
       name: EmitToGraphiteLog4jAppender
+      subsystem: TestSubsystem
       host: "haystack.local" # set in /etc/hosts per instructions in haystack-deployment package
       port: 2003 # default Graphite port, rarely overridden, but can be overridden by env variable
       pollintervalseconds: 60

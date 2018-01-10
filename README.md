@@ -20,11 +20,12 @@ style number (milliseconds since January 1, 1970, midnight GMT). The format of t
 is used in the data.influxdb.templates array [here](https://github.com/ExpediaDotCom/haystack/blob/master/deployment/k8s/addons/1.6/monitoring/influxdb.yaml#L91)
 and is of the following format:
 
-```haystack.errors.<fully-qualified-class-name>.<server>.<lineNumber>.<ERROR_TYPE>_<suffix>```
+```haystack.errors.<subsystem>.<fully-qualified-class-name>.<server>.<lineNumber>.<ERROR_TYPE>_<suffix>```
 
 where 
-* `<fully-qualified-class-name>` is something like `com-foo-MyClass` (`com.foo` is the package, `MyClass` is the name
-of the class, and all the periods have been replaced by hyphens).
+* `<subsystem>` is the name of the subsystem (like `pipes`, `collector`, etc.).
+* `<fully-qualified-class-name>` is something like `com-foo-MyClass` (`com.foo` is the package, `MyClass` is the name of
+the class, and all the periods in the package have been replaced by hyphens).
 * `<server>` is the name of the server where the error occurred.
 * `<lineNumber>` is the line number in MyClass.java or MyClass.scala where the call to log the error was made.
 * `ERROR_TYPE` is either `ERROR` or `FATAL`.
