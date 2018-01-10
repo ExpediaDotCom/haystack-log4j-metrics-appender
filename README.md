@@ -1,3 +1,4 @@
+[![Coverage Status](https://coveralls.io/repos/github/ExpediaDotCom/haystack-log4j-metrics-appender/badge.svg?branch=master)](https://coveralls.io/github/ExpediaDotCom/haystack-log4j-metrics-appender?branch=master)
 # haystack-log4j-metrics-appender
 A log4j appender that sends an error count to a graphite endpoint
 
