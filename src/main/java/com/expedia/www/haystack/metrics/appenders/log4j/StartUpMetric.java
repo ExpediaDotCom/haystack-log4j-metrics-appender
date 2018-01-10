@@ -19,10 +19,10 @@ class StartUpMetric {
     private final Timer timer;
     private final Counter counter;
 
-    StartUpMetric(Timer timer, EmitToGraphiteLog4jAppender.Factory factory, MetricObjects metricObjects) {
+    StartUpMetric(String subsystem, Timer timer, EmitToGraphiteLog4jAppender.Factory factory, MetricObjects metricObjects) {
         this.timer = timer;
         counter = factory.createCounter(metricObjects,
-                FULLY_QUALIFIED_CLASS_NAME, LINE_NUMBER_OF_EMIT_START_UP_METRIC_METHOD, ERROR.toString());
+                subsystem, FULLY_QUALIFIED_CLASS_NAME, LINE_NUMBER_OF_EMIT_START_UP_METRIC_METHOD, ERROR.toString());
     }
 
     void start() {
