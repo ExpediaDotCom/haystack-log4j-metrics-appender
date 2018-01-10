@@ -49,26 +49,31 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     @VisibleForTesting
     static final String NULL_STACK_TRACE_ELEMENT_MSG = "Null StackTraceElement found for LogEvent [%s] LoggerFqcn [%s]";
     @VisibleForTesting
-    static final String SUBSYSTEM = "errors";
+    static final String ERRORS_METRIC_GROUP = "errors";
     @VisibleForTesting
     static final Map<String, Counter> ERRORS_COUNTERS = new ConcurrentHashMap<>();
 
     @VisibleForTesting
     static Logger logger = LogManager.getLogger(EmitToGraphiteLog4jAppender.class);
 
+    private final String subsystem;
     private final MetricPublishing metricPublishing;
     private final MetricObjects metricObjects;
     private final Factory factory;
     private StartUpMetric startUpMetric;
 
-    private EmitToGraphiteLog4jAppender(String name) {
-        this(name, new MetricPublishing(), new MetricObjects(), new Factory());
+    private EmitToGraphiteLog4jAppender(String subsystem, String name) {
+        this(subsystem, name, new MetricPublishing(), new MetricObjects(), new Factory());
     }
 
     @VisibleForTesting
-    EmitToGraphiteLog4jAppender(
-            String name, MetricPublishing metricPublishing, MetricObjects metricObjects, Factory factory) {
+    EmitToGraphiteLog4jAppender(String subsystem,
+                                String name,
+                                MetricPublishing metricPublishing,
+                                MetricObjects metricObjects,
+                                Factory factory) {
         super(name, null, null);
+        this.subsystem = subsystem;
         this.metricPublishing = metricPublishing;
         this.metricObjects = metricObjects;
         this.factory = factory;
@@ -81,6 +86,7 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
 
     @PluginFactory
     static EmitToGraphiteLog4jAppender createAppender(
+            @PluginAttribute(value = "subsystem") String subsystem,
             @PluginAttribute(value = "name", defaultString = "EmitToGraphiteLog4jAppender") String name,
             @PluginAttribute(value = "host", defaultString = "haystack.local") String host,
             @PluginAttribute(value = "port", defaultInt = 2003) int port,
@@ -88,9 +94,9 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
             @PluginAttribute(value = "queuesize", defaultInt = 10) int queuesize,
             @PluginAttribute(value = "sendasrate") boolean sendasrrate) {
         final StartUpMetric startUpMetric = staticFactory.createStartUpMetric(
-                new MetricObjects(), new Timer());
+                subsystem, new MetricObjects(), new Timer());
         final EmitToGraphiteLog4jAppender emitToGraphiteLog4jAppender
-                = staticFactory.createEmitToGraphiteLog4jAppender(name);
+                = staticFactory.createEmitToGraphiteLog4jAppender(subsystem, name);
         emitToGraphiteLog4jAppender.startMetricPublishingBackgroundThread(
                 host, port, pollintervalseconds, queuesize, sendasrrate);
         emitToGraphiteLog4jAppender.setStartUpMetric(startUpMetric);
@@ -148,7 +154,7 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         final String key = fullyQualifiedClassName + ':' + lineNumber;
         if (!ERRORS_COUNTERS.containsKey(key)) {
             final Counter counter = factory.createCounter(
-                    metricObjects, fullyQualifiedClassName, lineNumber, level.name());
+                    metricObjects, subsystem, fullyQualifiedClassName, lineNumber, level.name());
 
             // It is possible but highly unlikely that two threads are in this if() block at the same time; if that
             // occurs, only one of the calls to ERRORS_COUNTERS.putIfAbsent(hashCode, counter) in the next line of code
@@ -170,16 +176,21 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
 
     @VisibleForTesting
     static class Factory {
-        Counter createCounter(MetricObjects metricObjects, String application, String className, String counterName) {
-            return metricObjects.createAndRegisterResettingCounter(SUBSYSTEM, application, className, counterName);
+        Counter createCounter(MetricObjects metricObjects,
+                              String subsystem,
+                              String fullyQualifiedClassName,
+                              String lineNumber,
+                              String counterName) {
+            return metricObjects.createAndRegisterResettingCounter(
+                    ERRORS_METRIC_GROUP, subsystem, fullyQualifiedClassName, lineNumber, counterName);
         }
 
-        StartUpMetric createStartUpMetric(MetricObjects metricObjects, Timer timer) {
-            return new StartUpMetric(timer, this, metricObjects);
+        StartUpMetric createStartUpMetric(String subsystem, MetricObjects metricObjects, Timer timer) {
+            return new StartUpMetric(subsystem, timer, this, metricObjects);
         }
 
-        EmitToGraphiteLog4jAppender createEmitToGraphiteLog4jAppender(String name) {
-            return new EmitToGraphiteLog4jAppender(name);
+        EmitToGraphiteLog4jAppender createEmitToGraphiteLog4jAppender(String subsystem, String name) {
+            return new EmitToGraphiteLog4jAppender(subsystem, name);
         }
     }
 }

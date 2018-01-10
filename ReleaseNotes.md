@@ -1,5 +1,8 @@
 # Release Notes
 
+## 0.1.5 / 2018-01-10 Use new haystack-metrics API for error counter
+so that the individual applications' error metrics can be identified as specific to each application
+
 ## 0.1.4 / 2018-01-04 Emit an ERROR metric, with a count of 0, every minute
 The writing of a metric to show that the appender is working now occurs in a background thread every minute;
 the value of the metric thus emitted will be 0. When an error occurs, the value of the metric will be greater than 0,
