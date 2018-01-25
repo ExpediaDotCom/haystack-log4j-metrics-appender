@@ -1,5 +1,8 @@
 # Release Notes
 
+## 0.1.6 / 2018-01-25 Upgrade the version of log4j2
+Upgraded from 2.9.1 to 2.10.0; also made the versions of jackson-databind and jackson-dataformat-yaml always match.
+
 ## 0.1.5 / 2018-01-10 Use new haystack-metrics API for error counter
 so that the individual applications' error metrics can be identified as specific to each application
 
