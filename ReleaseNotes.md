@@ -1,5 +1,9 @@
 # Release Notes
 
+## 0.1.7 / 2018-02-08 Use new haystack-metrics 0.6.0
+This new version of haystack-metrics ignores IllegalStateException when shutting down the poller.
+(the IllegalStateException can happen if the poller has not been started.)
+
 ## 0.1.6 / 2018-01-25 Upgrade the version of log4j2
 Upgraded from 2.9.1 to 2.10.0; also made the versions of jackson-databind and jackson-dataformat-yaml always match.
 
