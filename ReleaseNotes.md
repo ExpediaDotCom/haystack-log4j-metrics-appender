@@ -1,5 +1,8 @@
 # Release Notes
 
+## 0.1.9 / 2018-03-01 Use new haystack-metrics 0.8.0
+This new version of haystack-metrics has an additional informational log message when the metrics polling starts.
+
 ## 0.1.8 / 2018-02-22 Use new haystack-metrics 0.7.0
 This new version of haystack-metrics performs environment variable substitution for environment variables prefixed by
 the typical ${ and suffixed by the typical }. This was needed to allow the specification of GRAPHITE_HOST by
