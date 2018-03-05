@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.1.10 / 2018-03-05 Use log4j2 lifecycle properly
+The factory method that creates the appender was starting the metrics polling thread, which is incorrect; as a result of
+this bug, the start up metric was never active for long, as log4j stops and then restarts the appender during start-up.
+The fix is to make EmitToGraphiteLog4jAppender.start() start both the metrics polling thread and the start up metric,
+and to make EmitToGraphiteLog4jAppender.stop() shut them both down.
+
 ## 0.1.9 / 2018-03-01 Use new haystack-metrics 0.8.0
 This new version of haystack-metrics has an additional informational log message when the metrics polling starts.
 
