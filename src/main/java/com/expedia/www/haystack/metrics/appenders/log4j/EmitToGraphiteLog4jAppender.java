@@ -60,10 +60,11 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
     private final MetricPublishing metricPublishing;
     private final MetricObjects metricObjects;
     private final Factory factory;
+    private Configuration configuration;
     private StartUpMetric startUpMetric;
 
     private EmitToGraphiteLog4jAppender(String subsystem, String name) {
-        this(subsystem, name, new MetricPublishing(), new MetricObjects(), new Factory());
+        this(subsystem, name, new MetricPublishing(), new MetricObjects(), new Factory(), null, null);
     }
 
     @VisibleForTesting
@@ -71,12 +72,16 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
                                 String name,
                                 MetricPublishing metricPublishing,
                                 MetricObjects metricObjects,
-                                Factory factory) {
+                                Factory factory,
+                                Configuration configuration,
+                                StartUpMetric startUpMetric) {
         super(name, null, null);
         this.subsystem = subsystem;
         this.metricPublishing = metricPublishing;
         this.metricObjects = metricObjects;
         this.factory = factory;
+        this.configuration = configuration;
+        this.startUpMetric = startUpMetric;
     }
 
     @VisibleForTesting
@@ -97,32 +102,29 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
                 subsystem, new MetricObjects(), new Timer());
         final EmitToGraphiteLog4jAppender emitToGraphiteLog4jAppender
                 = staticFactory.createEmitToGraphiteLog4jAppender(subsystem, name);
-        emitToGraphiteLog4jAppender.startMetricPublishingBackgroundThread(
-                host, port, pollintervalseconds, queuesize, sendasrrate);
+        emitToGraphiteLog4jAppender.configuration 
+                = staticFactory.createConfiguration(host, port, pollintervalseconds, queuesize, sendasrrate);
         emitToGraphiteLog4jAppender.setStartUpMetric(startUpMetric);
         return emitToGraphiteLog4jAppender;
     }
 
-    @VisibleForTesting
-    void startMetricPublishingBackgroundThread(
-            String host, int port, int pollintervalseconds, int queuesize, boolean sendasrate) {
-        final GraphiteConfig graphiteConfig = new GraphiteConfigImpl(
-                host, port, pollintervalseconds, queuesize, sendasrate);
+    private void startMetricPublishingBackgroundThread() {
+        final GraphiteConfig graphiteConfig = new GraphiteConfigImpl(configuration.host, configuration.port,
+                configuration.pollintervalseconds, configuration.queuesize, configuration.sendasrate);
         metricPublishing.start(graphiteConfig);
     }
 
     @Override
     public void start() {
         super.start();
+        startMetricPublishingBackgroundThread();
         startUpMetric.start();
     }
 
     @Override
     public boolean stop(final long timeout, final TimeUnit timeUnit) {
+        startUpMetric.stop();
         metricPublishing.stop();
-        if(startUpMetric != null) {
-            startUpMetric.stop();
-        }
         return super.stop(timeout, timeUnit);
     }
 
@@ -174,6 +176,22 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         return level == ERROR || level == FATAL;
     }
 
+    static class Configuration {
+        final String host;
+        final int port;
+        final int pollintervalseconds;
+        final int queuesize;
+        final boolean sendasrate;
+
+        Configuration(String host, int port, int pollintervalseconds, int queuesize, boolean sendasrate) {
+            this.host = host;
+            this.port = port;
+            this.pollintervalseconds = pollintervalseconds;
+            this.queuesize = queuesize;
+            this.sendasrate = sendasrate;
+        }
+    }
+    
     @VisibleForTesting
     static class Factory {
         Counter createCounter(MetricObjects metricObjects,
@@ -191,6 +209,14 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
 
         EmitToGraphiteLog4jAppender createEmitToGraphiteLog4jAppender(String subsystem, String name) {
             return new EmitToGraphiteLog4jAppender(subsystem, name);
+        }
+
+        Configuration createConfiguration(String host,
+                                          int port,
+                                          int pollintervalseconds,
+                                          int queuesize,
+                                          boolean sendasrrate) {
+            return new Configuration(host, port, pollintervalseconds, queuesize, sendasrrate);
         }
     }
 }

@@ -12,7 +12,7 @@
 
     <groupId>com.expedia.www</groupId>
     <artifactId>haystack-log4j-metrics-appender</artifactId>
-    <version>0.1.9-SNAPSHOT</version>
+    <version>0.1.10-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <scm>

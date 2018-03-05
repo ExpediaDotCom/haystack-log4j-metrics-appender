@@ -16,8 +16,11 @@
  */
 package com.expedia.www.haystack.metrics.appenders.log4j;
 
+import com.expedia.www.haystack.metrics.GraphiteConfig;
+import com.expedia.www.haystack.metrics.GraphiteConfigImpl;
 import com.expedia.www.haystack.metrics.MetricObjects;
 import com.expedia.www.haystack.metrics.MetricPublishing;
+import com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.Configuration;
 import com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.Factory;
 import com.google.common.collect.Sets;
 import com.netflix.servo.monitor.Counter;
@@ -36,8 +39,8 @@ import java.util.Set;
 import java.util.Timer;
 
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.ERRORS_COUNTERS;
-import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.NULL_STACK_TRACE_ELEMENT_MSG;
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.ERRORS_METRIC_GROUP;
+import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.NULL_STACK_TRACE_ELEMENT_MSG;
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.changePeriodsToDashes;
 import static com.expedia.www.haystack.metrics.appenders.log4j.EmitToGraphiteLog4jAppender.createAppender;
 import static org.apache.logging.log4j.Level.ERROR;
@@ -47,6 +50,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.verify;
@@ -70,7 +75,12 @@ public class EmitToGraphiteLog4jAppenderTest {
     private static final boolean SEND_AS_RATE = RANDOM.nextBoolean();
     private static final String S_LINE_NUMBER = Integer.toString(LINE_NUMBER);
     private static final String KEY = changePeriodsToDashes(FULLY_QUALIFIED_CLASS_NAME) + ':' + S_LINE_NUMBER;
-    private static final String COUNTER_NAME = ERROR.name();
+    private String COUNTER_NAME = ERROR.name();
+    private static final Configuration CONFIGURATION =
+            new Configuration(HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
+    private static final GraphiteConfig GRAPHITE_CONFIG =
+            new GraphiteConfigImpl(HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
+
 
     @Mock
     private LogEvent mockLogEvent;
@@ -95,6 +105,9 @@ public class EmitToGraphiteLog4jAppenderTest {
     private StartUpMetric mockStartUpMetric;
 
     @Mock
+    private Timer mockTimer;
+
+    @Mock
     private Logger mockLogger;
     private Logger realLogger;
 
@@ -106,8 +119,8 @@ public class EmitToGraphiteLog4jAppenderTest {
         stubOutStaticDependencies();
         ERRORS_COUNTERS.clear();
         stackTraceElement = new StackTraceElement(FULLY_QUALIFIED_CLASS_NAME, METHOD_NAME, FILE_NAME, LINE_NUMBER);
-        emitToGraphiteLog4jAppender = new EmitToGraphiteLog4jAppender(
-                SUBSYSTEM, APPENDER_NAME, mockMetricPublishing, mockMetricObjects, mockFactory);
+        emitToGraphiteLog4jAppender = new EmitToGraphiteLog4jAppender(SUBSYSTEM, APPENDER_NAME,
+                mockMetricPublishing, mockMetricObjects, mockFactory, CONFIGURATION, mockStartUpMetric);
     }
 
     private void stubOutStaticDependencies() {
@@ -121,7 +134,7 @@ public class EmitToGraphiteLog4jAppenderTest {
     public void tearDown() {
         restoreStaticDependencies();
         verifyNoMoreInteractions(mockLogEvent, mockFactory, mockCounter, mockMetricObjects, mockMetricPublishing,
-                mockEmitToGraphiteLog4jAppender, mockStartUpMetric, mockLogger);
+                mockEmitToGraphiteLog4jAppender, mockStartUpMetric, mockLogger, mockTimer);
     }
 
     private void restoreStaticDependencies() {
@@ -194,7 +207,7 @@ public class EmitToGraphiteLog4jAppenderTest {
                     emitToGraphiteLog4jAppender.isLevelSevereEnoughToCount(level));
         }
     }
-    
+
     @Test
     public void testFactoryCreateCounter() {
         when(mockMetricObjects.createAndRegisterResettingCounter(
@@ -209,11 +222,20 @@ public class EmitToGraphiteLog4jAppenderTest {
     }
 
     @Test
+    public void testStart() {
+        emitToGraphiteLog4jAppender.start();
+
+        verify(mockMetricPublishing).start(GRAPHITE_CONFIG);
+        verify(mockStartUpMetric).start();
+    }
+
+    @Test
     public void testStopNullStartUpMetric() {
         emitToGraphiteLog4jAppender.stop();
 
         assertTrue(emitToGraphiteLog4jAppender.isStopped());
         verify(mockMetricPublishing).stop();
+        verify(mockStartUpMetric).stop();
     }
 
     @Test
@@ -232,15 +254,25 @@ public class EmitToGraphiteLog4jAppenderTest {
                 .thenReturn(mockEmitToGraphiteLog4jAppender);
         when(mockFactory.createStartUpMetric(anyString(), any(MetricObjects.class), any(Timer.class)))
                 .thenReturn(mockStartUpMetric);
+        when(mockFactory.createConfiguration(anyString(), anyInt(), anyInt(), anyInt(), anyBoolean()))
+                .thenReturn(CONFIGURATION);
 
         final EmitToGraphiteLog4jAppender appender
                 = createAppender(SUBSYSTEM, APPENDER_NAME, HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
 
         assertSame(mockEmitToGraphiteLog4jAppender, appender);
+        verify(mockFactory).createConfiguration(HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
         verify(mockFactory).createEmitToGraphiteLog4jAppender(SUBSYSTEM, APPENDER_NAME);
-        verify(mockEmitToGraphiteLog4jAppender).startMetricPublishingBackgroundThread(
-                HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
         verify(mockFactory).createStartUpMetric(eq(SUBSYSTEM), any(MetricObjects.class), any(Timer.class));
         verify(mockEmitToGraphiteLog4jAppender).setStartUpMetric(mockStartUpMetric);
+    }
+
+    @Test
+    public void testConfigurationConstructor() {
+        assertEquals(HOST, CONFIGURATION.host);
+        assertEquals(PORT, CONFIGURATION.port);
+        assertEquals(POLL_INTERVAL_SECONDS, CONFIGURATION.pollintervalseconds);
+        assertEquals(QUEUE_SIZE, CONFIGURATION.queuesize);
+        assertEquals(SEND_AS_RATE, CONFIGURATION.sendasrate);
     }
 }
