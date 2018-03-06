@@ -1,8 +1,12 @@
 # Release Notes
 
-## 0.1.11 / 2018-03-05 Use new haystack-metrics 0.8.0
+## 0.1.12 / 2018-03-06 Use new haystack-metrics 0.10.0
+This new version of haystack-metrics counts that number of times that the metrics polling thread was started
+with a static variable instead of an instance variable.
+
+## 0.1.11 / 2018-03-05 Use new haystack-metrics 0.9.0
 This new version of haystack-metrics counts that number of times that the metrics polling thread was started, so that it
-can avoid shutting down that thread prematurely. This change was necessitated by the behavior of log4js when starting
+can avoid shutting down that thread prematurely. This change was necessitated by the behavior of log4j2 when starting
 up.
 
 ## 0.1.10 / 2018-03-05 Use log4j2 lifecycle properly
