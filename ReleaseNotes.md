@@ -1,5 +1,8 @@
 # Release Notes
 
+## 0.1.13 / 2018-03-06 Change suggesting polling interval to 5 minutes
+Change the suggested polling interval, documented in log4j2-test.yaml, to 5 minutes. No functional changes.
+
 ## 0.1.12 / 2018-03-06 Use new haystack-metrics 0.10.0
 This new version of haystack-metrics counts that number of times that the metrics polling thread was started
 with a static variable instead of an instance variable.
