@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.0.0 / 2018-04-09 Use haystack-metrics 1.0.0
+This new version of haystack-metrics provides access to Servo's StatsTimer and BucketTimer. These two new Timer types
+are not used by haystack-log4j-metrics-appender.
+
 ## 0.1.13 / 2018-03-06 Change suggesting polling interval to 5 minutes
 Change the suggested polling interval, documented in log4j2-test.yaml, to 5 minutes. No functional changes.
 
