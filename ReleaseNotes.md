@@ -1,5 +1,9 @@
 # Release Notes
 
+## 1.0.1 / 2018-04-12 Use haystack-metrics 2.0.0
+This new version of haystack-metrics removes support for Servo's StatsTimer.
+Change StartUpMetric interval to 5 minutes.
+
 ## 1.0.0 / 2018-04-09 Use haystack-metrics 1.0.0
 This new version of haystack-metrics provides access to Servo's StatsTimer and BucketTimer. These two new Timer types
 are not used by haystack-log4j-metrics-appender.

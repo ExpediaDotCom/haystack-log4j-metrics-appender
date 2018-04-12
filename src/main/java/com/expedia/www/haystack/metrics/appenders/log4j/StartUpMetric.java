@@ -13,7 +13,7 @@ import static org.apache.logging.log4j.Level.ERROR;
 class StartUpMetric {
     private static final int METRIC_VALUE = 0;
     private static final long INITIAL_DELAY_MILLIS = 0L;
-    private static final int INTERVAL_MINUTES = 1;
+    private static final int INTERVAL_MINUTES = 5;
     private static final String FULLY_QUALIFIED_CLASS_NAME = changePeriodsToDashes(
             StartUpMetric.class.getName());
     private final Timer timer;
