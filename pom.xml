@@ -12,7 +12,7 @@
 
     <groupId>com.expedia.www</groupId>
     <artifactId>haystack-log4j-metrics-appender</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <scm>
@@ -76,7 +76,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <coveralls-maven-plugin-version>4.3.0</coveralls-maven-plugin-version>
-        <haystack-metrics-version>1.0.0</haystack-metrics-version>
+        <haystack-metrics-version>2.0.0</haystack-metrics-version>
         <java.version>1.8</java.version>
         <jackson-version>2.9.1</jackson-version>
         <jacoco-maven-plugin-version>0.7.9</jacoco-maven-plugin-version>
