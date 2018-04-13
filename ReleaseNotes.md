@@ -1,5 +1,8 @@
 # Release Notes
 
+## 1.0.2 / 2018-04-13 Use haystack-metrics 2.0.0
+Deployment issues with SonaType; hopefully fixed with a new version (no code changes).
+
 ## 1.0.1 / 2018-04-12 Use haystack-metrics 2.0.0
 This new version of haystack-metrics removes support for Servo's StatsTimer.
 Change StartUpMetric interval to 5 minutes.
