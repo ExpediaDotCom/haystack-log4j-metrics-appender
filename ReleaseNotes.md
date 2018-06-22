@@ -1,5 +1,7 @@
 # Release Notes
 
+## 1.0.3 / 2018-06-22 Change haystack-metrics version to 2.0.1
+
 ## 1.0.2 / 2018-04-13 Use haystack-metrics 2.0.0
 Deployment issues with SonaType; hopefully fixed with a new version (no code changes).
 
