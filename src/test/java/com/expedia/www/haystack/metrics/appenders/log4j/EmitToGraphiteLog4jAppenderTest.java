@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Expedia, Inc.
+ * Copyright 2018 Expedia, Inc.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
@@ -73,8 +73,8 @@ public class EmitToGraphiteLog4jAppenderTest {
     private static final int POLL_INTERVAL_SECONDS = RANDOM.nextInt(Integer.MAX_VALUE);
     private static final int QUEUE_SIZE = RANDOM.nextInt(Integer.MAX_VALUE);
     private static final boolean SEND_AS_RATE = RANDOM.nextBoolean();
-    private static final String S_LINE_NUMBER = Integer.toString(LINE_NUMBER);
-    private static final String KEY = changePeriodsToDashes(FULLY_QUALIFIED_CLASS_NAME) + ':' + S_LINE_NUMBER;
+    //private static final String S_LINE_NUMBER = Integer.toString(LINE_NUMBER);
+    private static final String KEY = changePeriodsToDashes(FULLY_QUALIFIED_CLASS_NAME)/* + ':' + S_LINE_NUMBER*/;
     private String COUNTER_NAME = ERROR.name();
     private static final Configuration CONFIGURATION =
             new Configuration(HOST, PORT, POLL_INTERVAL_SECONDS, QUEUE_SIZE, SEND_AS_RATE);
@@ -154,7 +154,7 @@ public class EmitToGraphiteLog4jAppenderTest {
     @Test
     public void testAppendNullStackTraceElement() {
         when(mockLogEvent.getLevel()).thenReturn(ERROR);
-        when(mockFactory.createCounter(any(MetricObjects.class), anyString(), anyString(), anyString(), anyString()))
+        when(mockFactory.createCounter(any(MetricObjects.class), anyString(), anyString(), /*anyString(), */anyString()))
                 .thenReturn(mockCounter);
         final String className = EmitToGraphiteLog4jAppender.class.getName();
         when(mockLogEvent.getLoggerFqcn()).thenReturn(className);
@@ -171,7 +171,7 @@ public class EmitToGraphiteLog4jAppenderTest {
     public void testAppendNonNullStackTraceElement() {
         when(mockLogEvent.getLevel()).thenReturn(ERROR);
         when(mockLogEvent.getSource()).thenReturn(stackTraceElement);
-        when(mockFactory.createCounter(any(MetricObjects.class), anyString(), anyString(), anyString(), anyString()))
+        when(mockFactory.createCounter(any(MetricObjects.class), anyString(), anyString(), /*anyString(), */anyString()))
                 .thenReturn(mockCounter);
 
         emitToGraphiteLog4jAppender.append(mockLogEvent);
@@ -180,13 +180,13 @@ public class EmitToGraphiteLog4jAppenderTest {
         verify(mockLogEvent).getSource();
         assertSame(mockCounter, ERRORS_COUNTERS.get(KEY));
         verify(mockFactory).createCounter(
-                mockMetricObjects, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, S_LINE_NUMBER, COUNTER_NAME);
+                mockMetricObjects, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, /*S_LINE_NUMBER, */COUNTER_NAME);
         verify(mockCounter).increment();
     }
 
     @Test
     public void testGetCounterAlreadyExists() {
-        when(mockFactory.createCounter(any(MetricObjects.class), anyString(), anyString(), anyString(), anyString()))
+        when(mockFactory.createCounter(any(MetricObjects.class), anyString(), anyString(), /*anyString(), */anyString()))
                 .thenReturn(mockCounter);
 
         final Counter counter = emitToGraphiteLog4jAppender.getCounter(ERROR, stackTraceElement);
@@ -195,7 +195,7 @@ public class EmitToGraphiteLog4jAppenderTest {
         assertEquals(1, ERRORS_COUNTERS.size());
         assertSame(mockCounter, ERRORS_COUNTERS.get(KEY));
         verify(mockFactory).createCounter(
-                mockMetricObjects, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, S_LINE_NUMBER, COUNTER_NAME);
+                mockMetricObjects, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, /*S_LINE_NUMBER, */COUNTER_NAME);
     }
 
     @Test
@@ -211,14 +211,14 @@ public class EmitToGraphiteLog4jAppenderTest {
     @Test
     public void testFactoryCreateCounter() {
         when(mockMetricObjects.createAndRegisterResettingCounter(
-                anyString(), anyString(), anyString(), anyString(), anyString())).thenReturn(mockCounter);
+                anyString(), anyString(), anyString(), /*anyString(), */anyString())).thenReturn(mockCounter);
 
         final Counter counter = realFactory.createCounter(
-                mockMetricObjects, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, S_LINE_NUMBER, COUNTER_NAME);
+                mockMetricObjects, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, /*S_LINE_NUMBER, */COUNTER_NAME);
 
         assertSame(mockCounter, counter);
         verify(mockMetricObjects).createAndRegisterResettingCounter(
-                ERRORS_METRIC_GROUP, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, S_LINE_NUMBER, COUNTER_NAME);
+                ERRORS_METRIC_GROUP, SUBSYSTEM, FULLY_QUALIFIED_CLASS_NAME, /*S_LINE_NUMBER, */COUNTER_NAME);
     }
 
     @Test

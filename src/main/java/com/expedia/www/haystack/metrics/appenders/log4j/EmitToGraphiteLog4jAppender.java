@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Expedia, Inc.
+ * Copyright 2018 Expedia, Inc.
  *
  *       Licensed under the Apache License, Version 2.0 (the "License");
  *       you may not use this file except in compliance with the License.
@@ -97,13 +97,13 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
             @PluginAttribute(value = "port", defaultInt = 2003) int port,
             @PluginAttribute(value = "pollintervalseconds", defaultInt = 60) int pollintervalseconds,
             @PluginAttribute(value = "queuesize", defaultInt = 10) int queuesize,
-            @PluginAttribute(value = "sendasrate") boolean sendasrrate) {
+            @PluginAttribute(value = "sendasrate") boolean sendasrate) {
         final StartUpMetric startUpMetric = staticFactory.createStartUpMetric(
                 subsystem, new MetricObjects(), new Timer());
         final EmitToGraphiteLog4jAppender emitToGraphiteLog4jAppender
                 = staticFactory.createEmitToGraphiteLog4jAppender(subsystem, name);
         emitToGraphiteLog4jAppender.configuration 
-                = staticFactory.createConfiguration(host, port, pollintervalseconds, queuesize, sendasrrate);
+                = staticFactory.createConfiguration(host, port, pollintervalseconds, queuesize, sendasrate);
         emitToGraphiteLog4jAppender.setStartUpMetric(startUpMetric);
         return emitToGraphiteLog4jAppender;
     }
@@ -149,14 +149,25 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         }
     }
 
+    // From https://github.com/ExpediaDotCom/haystack-log4j-metrics-appender/issues/30
+    // Scaling issues with InfluxDb have led us to change the way that Graphite messages are changed into
+    // tagged metrics in InfluxDb; in particular, the InfluxDb template for the error metrics was changed from
+    // "haystack.errors.* system.metricGroup.subsystem.fqClass.host.lineNumber.measurement*" to
+    // "haystack.errors.* measurement.measurement.measurement.fqClass.host.field*". As a result, the presence of line
+    // number in the metric needs to be removed. In the interest of simplicity, I will comment out the code that inserts
+    // line number into the Graphite metric, to facilitate a potential setting-based change in the future to allow this
+    // package to create both types of Graphite metrics.
     @VisibleForTesting
     Counter getCounter(Level level, StackTraceElement stackTraceElement) {
         final String fullyQualifiedClassName = changePeriodsToDashes(stackTraceElement.getClassName());
-        final String lineNumber = Integer.toString(stackTraceElement.getLineNumber());
-        final String key = fullyQualifiedClassName + ':' + lineNumber;
+
+        // final String lineNumber = Integer.toString(stackTraceElement.getLineNumber());
+
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        final String key = fullyQualifiedClassName/* + ':' + lineNumber*/;
         if (!ERRORS_COUNTERS.containsKey(key)) {
             final Counter counter = factory.createCounter(
-                    metricObjects, subsystem, fullyQualifiedClassName, lineNumber, level.name());
+                    metricObjects, subsystem, fullyQualifiedClassName, /*lineNumber, */level.name());
 
             // It is possible but highly unlikely that two threads are in this if() block at the same time; if that
             // occurs, only one of the calls to ERRORS_COUNTERS.putIfAbsent(hashCode, counter) in the next line of code
@@ -197,10 +208,10 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
         Counter createCounter(MetricObjects metricObjects,
                               String subsystem,
                               String fullyQualifiedClassName,
-                              String lineNumber,
+                              /*String lineNumber,*/
                               String counterName) {
             return metricObjects.createAndRegisterResettingCounter(
-                    ERRORS_METRIC_GROUP, subsystem, fullyQualifiedClassName, lineNumber, counterName);
+                    ERRORS_METRIC_GROUP, subsystem, fullyQualifiedClassName, /*lineNumber, */counterName);
         }
 
         StartUpMetric createStartUpMetric(String subsystem, MetricObjects metricObjects, Timer timer) {
@@ -215,8 +226,8 @@ public class EmitToGraphiteLog4jAppender extends AbstractAppender {
                                           int port,
                                           int pollintervalseconds,
                                           int queuesize,
-                                          boolean sendasrrate) {
-            return new Configuration(host, port, pollintervalseconds, queuesize, sendasrrate);
+                                          boolean sendasrate) {
+            return new Configuration(host, port, pollintervalseconds, queuesize, sendasrate);
         }
     }
 }
