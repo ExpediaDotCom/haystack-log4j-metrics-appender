@@ -1,5 +1,11 @@
 # Release Notes
 
+## 1.0.7 / 2018-10-16 Use com.fasterxml.jackson.* 2.9.8
+Fixed security vulnerability
+
+## 1.0.6 / 2017-12-28 Remove line number from ERROR_COUNTER metric
+See https://github.com/ExpediaDotCom/haystack-log4j-metrics-appender/issues/30
+
 ## 1.0.4 / 2018-10-16 Use com.fasterxml.jackson.* 2.9.7
 Fixed security vulnerability CVE-2018-7489
 
